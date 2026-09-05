@@ -1,62 +1,62 @@
 # Autostart Monitor
 
-Skrypt PowerShell do monitorowania i ochrony punktów autostartu w systemie Windows. Wykrywa nowe wpisy w rejestrze, folderach Startup oraz Harmonogramie zadań, loguje je i (opcjonalnie) automatycznie usuwa nieautoryzowane wpisy.
+A PowerShell script for monitoring and protecting Windows autostart entry points. It detects new entries in the registry, startup folders, and Task Scheduler, logs them, and can optionally remove unauthorized entries automatically.
 
-## Funkcje
+## Features
 
-- **Rejestr systemowy** – monitoruje klucze `Run` i `RunOnce` w `HKLM` i `HKCU`
-- **Foldery Startup** – śledzi folder Startup użytkownika i wspólny (All Users)
-- **Harmonogram zadań** – wykrywa zadania z wyzwalaczami `AtStartup`, `AtLogOn`, `Boot`
-- **Wykrywanie zmian** – porównuje aktualny stan z poprzednim skanem
-- **Biała lista** – pozwala oznaczyć zaufane wpisy, aby nie generowały alertów
-- **Logowanie** – zapisuje zdarzenia do pliku CSV oraz do Dziennika zdarzeń Windows (Event Log)
-- **Tryb interaktywny lub automatyczny** – przy pierwszym uruchomieniu GUI pyta, czy nowe wpisy usuwać automatycznie, czy każdorazowo pytać użytkownika
+- **Registry** – monitors `Run` and `RunOnce` keys under both `HKLM` and `HKCU`
+- **Startup folders** – tracks the user's Startup folder and the common (All Users) one
+- **Task Scheduler** – detects tasks with `AtStartup`, `AtLogOn`, or `Boot` triggers
+- **Change detection** – compares the current state against the previous scan
+- **Whitelist** – lets you mark trusted entries so they no longer trigger alerts
+- **Logging** – writes events to a CSV file and to the Windows Event Log
+- **Interactive or automatic mode** – on first run, a GUI asks whether new entries should be removed automatically or whether you'll be prompted each time
 
-## Wymagania
+## Requirements
 
-- Windows 10/11 lub Windows Server
-- PowerShell 5.1 lub nowszy
-- Uprawnienia administratora (zalecane, do pełnego dostępu do rejestru `HKLM` i Harmonogramu zadań)
+- Windows 10/11 or Windows Server
+- PowerShell 5.1 or newer
+- Administrator privileges (recommended, for full access to `HKLM` and Task Scheduler)
 
-## Instalacja
+## Installation
 
-1. Pobierz skrypt `AutostartMonitor.ps1` z repozytorium.
-2. Uruchom PowerShell **jako administrator**.
-3. Jeśli to konieczne, zezwól na wykonywanie skryptów lokalnie:
+1. Download `AutostartMonitor.ps1` from this repository.
+2. Open PowerShell **as Administrator**.
+3. If needed, allow local script execution:
    ```powershell
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
    ```
-4. Uruchom skrypt:
+4. Run the script:
    ```powershell
    .\AutostartMonitor.ps1
    ```
 
-## Pierwsze uruchomienie
+## First run
 
-Przy pierwszym starcie pojawi się okno z opcją:
+On first launch, a window will appear with the option:
 
 > **Enable automatic removal of new registry entries**
 
-- **Zaznaczone** – nowe wpisy rejestru będą usuwane automatycznie bez pytania
-- **Odznaczone** – każdy nowy wpis wygeneruje okno z pytaniem Tak/Nie
+- **Checked** – new registry entries will be removed automatically without prompting
+- **Unchecked** – every new entry will trigger a Yes/No confirmation dialog
 
-Wybór zapisywany jest w `settings.json` i nie będzie ponownie wyświetlany przy kolejnych uruchomieniach.
+Your choice is saved to `settings.json` and won't be asked again on subsequent runs.
 
-## Pliki danych
+## Data files
 
-Wszystkie dane robocze skrypt przechowuje w:
+All working data is stored under:
 
 ```
 %ProgramData%\Autostart_Monitor\
-├── settings.json          # zapisana konfiguracja (tryb auto-usuwania)
-├── autostart_state.json   # ostatni znany stan wszystkich wpisów autostartu
-├── whitelist.json          # lista zaufanych wpisów (patrz niżej)
-└── autostart_log.csv       # log wykrytych/nowych wpisów z sygnaturą czasową
+├── settings.json          # saved configuration (auto-remove mode)
+├── autostart_state.json   # last known state of all autostart entries
+├── whitelist.json          # list of trusted entries (see below)
+└── autostart_log.csv       # log of detected/new entries with timestamps
 ```
 
-## Biała lista (whitelist.json)
+## Whitelist (whitelist.json)
 
-Aby oznaczyć wpis jako zaufany i pominąć go przy kolejnych skanach, dodaj go do `whitelist.json` w formacie:
+To mark an entry as trusted and skip it in future scans, add it to `whitelist.json` in this format:
 
 ```json
 [
@@ -64,28 +64,28 @@ Aby oznaczyć wpis jako zaufany i pominąć go przy kolejnych skanach, dodaj go 
 ]
 ```
 
-## Automatyzacja (opcjonalnie)
+## Automation (optional)
 
-Aby skrypt uruchamiał się cyklicznie, można dodać zadanie w Harmonogramie zadań, np. co godzinę:
+To run the script on a schedule, you can add a Task Scheduler task, e.g. every hour:
 
 ```powershell
-$action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"C:\Sciezka\AutostartMonitor.ps1`""
+$action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"C:\Path\AutostartMonitor.ps1`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)
 Register-ScheduledTask -TaskName "AutostartMonitor" -Action $action -Trigger $trigger -RunLevel Highest
 ```
 
-## Ograniczenia
+## Limitations
 
-- Automatyczne usuwanie (`-Force`) obsługiwane jest obecnie tylko dla wpisów typu **Registry**. Wpisy z folderu Startup i Harmonogramu zadań są tylko raportowane.
-- Do odczytu niektórych zadań w Harmonogramie mogą być wymagane uprawnienia administratora — w przeciwnym razie skrypt wypisze ostrzeżenie i pominie te wpisy.
+- Automatic removal is currently supported only for **Registry**-type entries. Startup folder and Task Scheduler entries are reported only, not removed.
+- Reading some scheduled tasks may require administrator privileges — otherwise the script will print a warning and skip those entries.
 
-## Licencja
+## License
 
-MIT — używaj, modyfikuj i rozpowszechniaj dowolnie.
+MIT — use, modify, and distribute freely.
 
-## Zastrzeżenie
+## Disclaimer
 
-Skrypt modyfikuje rejestr systemowy. Przed pierwszym użyciem w trybie automatycznego usuwania zaleca się:
-- wykonanie kopii zapasowej rejestru,
-- przetestowanie w trybie interaktywnym (bez auto-remove),
-- dodanie do białej listy znanych, zaufanych programów startowych.
+This script modifies the Windows registry. Before using automatic removal mode, it's recommended to:
+- back up the registry,
+- test in interactive mode first (without auto-remove),
+- add known, trusted startup programs to the whitelist.
